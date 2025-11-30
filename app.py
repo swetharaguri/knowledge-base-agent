@@ -48,13 +48,11 @@ def build_collection(docs, ids=None):
 # --------------------------------------------------------------
 # Query
 # --------------------------------------------------------------
-def query_collection(query, k=5):
-    q_emb = embed_model.encode([query], convert_to_numpy=True).tolist()
-    return collection.query(
-        query_embeddings=q_emb,
-        n_results=k,
-        include=["documents", "distances", "ids"]
-    )
+return collection.query(
+    query_embeddings=q_emb,
+    n_results=k,
+    include=["documents", "distances"]
+)
 
 
 # ==============================================================
@@ -101,5 +99,6 @@ if st.button("Search"):
                 st.write("---")
         else:
             st.write("No results found.")
+
 
 
