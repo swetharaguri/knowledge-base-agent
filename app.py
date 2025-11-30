@@ -3,7 +3,18 @@ FAISS RETRIEVAL APP — NO OPENAI, NO CHROMA
 """
 
 import streamlit as st
-import faiss
+# --- begin fallback block ---
+import streamlit as st
+try:
+    import faiss
+    FAISS_AVAILABLE = True
+except Exception:
+    FAISS_AVAILABLE = False
+
+# If FAISS not present, use chromadb fallback…
+# (and all the rest of the code I gave you)
+# --- end fallback block ---
+
 import pickle
 from sentence_transformers import SentenceTransformer
 
@@ -40,3 +51,4 @@ if st.button("Search"):
             st.write("**Text:**", store["texts"][idx])
             st.write("**Source:**", store["metadata"][idx])
             st.write("---")
+
