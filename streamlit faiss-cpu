@@ -5,4 +5,5 @@ chromadb
 unstructured
 faiss-cpu
 sentence-transformers
-
+scikit-learn
+numpy
