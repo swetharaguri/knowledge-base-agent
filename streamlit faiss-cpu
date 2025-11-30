@@ -4,3 +4,5 @@ openai
 chromadb
 unstructured
 faiss-cpu
+sentence-transformers
+
