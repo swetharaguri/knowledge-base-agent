@@ -91,17 +91,9 @@ Then go to:
 
 Ask any question related to the documents, and the agent will return the most relevant chunks.
 
-🧠 How It Works (Architecture)
+🧠 ## 🧠 Architecture Diagram
 
-Document Loaders read files from /data
-
-Text Splitter converts documents into manageable chunks
-
-Sentence Transformer Model generates embeddings locally
-
-FAISS Index stores embeddings for fast vector similarity search
-
-Streamlit interface displays the results to the user
+![Architecture](architecture.png)
 
 🚀 Future Improvements
 
@@ -115,19 +107,72 @@ Add summarization and answer synthesis
 
 Multi-document citation view
 
-🎤 2-Minute Demo Script (for Jury)
+”
 
-“Hello everyone, I built a Knowledge Base AI Agent that can answer queries from any company document.”
+🎤 🔥 Final 2-Minute Demo Script
+Hello everyone, my name is Swetha.
+For this challenge, I built a Knowledge Base AI Agent that runs 100% locally without using any LLMs or paid APIs.
 
-“It is 100% local, uses FAISS for vector search, and Sentence Transformers for embeddings—so no API key or billing is required.”
+The goal of my agent is simple:
+To instantly answer questions from company documents like HR policies, onboarding files, FAQs, and support manuals.
 
-**“The workflow is simple:
-Documents are added into the data folder
-I run ingest.py to create embeddings
-FAISS builds a fast vector store
-The Streamlit interface allows users to ask questions and instantly see relevant document pieces.”**
-“It can help HR, Support, and Operations teams get instant answers from company policies and manuals.”
-“Thank you.”
+🧠 Architecture (Explained simply)
+
+My system works as a semantic search pipeline:
+
+Documents (TXT/PDF) are added to the data/ folder.
+
+Using ingest.py, the documents are:
+
+loaded,
+
+split into chunks,
+
+converted into embeddings using SentenceTransformer (all-MiniLM-L6-v2).
+
+These embeddings are stored in FAISS, a fast vector search index.
+
+In the Streamlit app, when a user types a question:
+
+their query is also embedded,
+
+FAISS finds the top most similar chunks,
+
+and I display both the answer snippet and the source file.
+
+This ensures:
+✔ No cloud dependency
+✔ No costs
+✔ Fast and private retrieval
+✔ Works even offline
+✔ Data stays on the organization’s machine
+
+💻 Demo Walkthrough
+
+Step 1:
+I run python ingest.py.
+This builds the FAISS vector index from the company documents.
+
+Step 2:
+I run streamlit run app.py.
+This opens the user interface.
+
+Step 3:
+I type a query like:
+“How many paid leaves do employees get?”
+
+The system instantly retrieves the exact answer snippet from the HR document and shows the file name as the source.
+
+This means the agent can be used in real companies to reduce repeated HR or support queries.
+🚀 Why this approach is strong
+Fully local
+No billing
+Zero API failures
+Extremely fast
+Data-secure
+Easy to deploy internally
+Works with any type of company documents
+This is a strong baseline for a future RAG system, and can easily be extended with a chat interface, summarization layer, or an LLM if needed.
 
 📄 License
 MIT License
