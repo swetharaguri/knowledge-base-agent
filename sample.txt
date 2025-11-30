@@ -2,3 +2,9 @@ Company Leave Policy:
 Employees get 12 paid leaves per year.
 Sick leave requires a medical certificate if longer than 3 days.
 Working hours are 9 AM to 6 PM.
+Streamlit is used for building web apps in Python.
+Knowledge Base Agent allows searching documents.
+Deployment happens on Streamlit Cloud.
+Search supports fuzzy matching and ranking.
+
+
