@@ -2,41 +2,46 @@ import streamlit as st
 import os
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
+from openai import OpenAI
 
+# Set up the app
 st.set_page_config(page_title="Knowledge Base Agent", layout="wide")
-st.title("📚 Knowledge Base Agent (Local & Free — FAST SEARCH)")
+st.title("📚 Knowledge Base Agent (FAST SEARCH — OpenAI Embeddings)")
 
+# Initialize OpenAI
+client_ai = OpenAI()
 
 # ==============================================================
 # 1) Initialize Chroma (in-memory)
 # ==============================================================
 
-# Simple safe Chroma client (no custom settings)
 client = chromadb.Client(Settings())
-
-# Collection name
 COLL_NAME = "kb_collection"
 
-# Create or get the collection
 try:
     collection = client.get_collection(name=COLL_NAME)
 except:
     collection = client.create_collection(name=COLL_NAME)
 
-# Embedding model
-embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+# ==============================================================
+# 2) Helper: Get embedding from OpenAI
+# ==============================================================
 
+def get_embedding(text):
+    response = client_ai.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return response.data[0].embedding
 
 # ==============================================================
-# 2) Build vector collection
+# 3) Build collection using OpenAI embeddings
 # ==============================================================
 
 def build_collection(docs, ids=None):
     ids = ids if ids else [str(i) for i in range(len(docs))]
-    embeddings = embed_model.encode(docs, convert_to_numpy=True).tolist()
+    embeddings = [get_embedding(doc) for doc in docs]
 
-    # Delete existing docs before adding
     try:
         collection.delete(ids=ids)
     except:
@@ -48,23 +53,21 @@ def build_collection(docs, ids=None):
         ids=ids
     )
 
-
 # ==============================================================
-# 3) Query function (fixed includes)
+# 4) Query collection
 # ==============================================================
 
 def query_collection(query, k=5):
-    q_emb = embed_model.encode([query], convert_to_numpy=True).tolist()
+    q_emb = get_embedding(query)
 
     return collection.query(
-        query_embeddings=q_emb,
+        query_embeddings=[q_emb],
         n_results=k,
         include=["documents", "distances"]
     )
 
-
 # ==============================================================
-# 4) Load and index sample.txt
+# 5) Load & index sample.txt
 # ==============================================================
 
 docs = []
@@ -83,11 +86,10 @@ if not docs:
 ids = [str(i) for i in range(len(docs))]
 build_collection(docs, ids)
 
-st.success(f"Indexed {len(docs)} documents from sample.txt")
-
+st.success(f"Indexed {len(docs)} documents using OpenAI embeddings")
 
 # ==============================================================
-# 5) Search UI
+# 6) Search UI
 # ==============================================================
 
 query = st.text_input("Ask a question or enter keywords:")
@@ -99,13 +101,14 @@ if st.button("Search"):
         results = query_collection(query, k=5)
 
         st.subheader("🔍 Top Results")
-
         if results and "documents" in results:
-            for i, doc in enumerate(results["documents"][0]):
+            docs_list = results["documents"][0]
+            dist_list = results["distances"][0]
+
+            for i, doc in enumerate(docs_list):
                 st.markdown(f"### Result {i+1}")
                 st.write(f"**Text:** {doc}")
-                st.write(f"**Distance:** {results['distances'][0][i]:.4f}")
+                st.write(f"**Distance:** {dist_list[i]:.4f}")
                 st.write("---")
         else:
             st.write("No results found.")
-
