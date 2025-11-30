@@ -1,71 +1,125 @@
-"""
-Knowledge Base Agent — Simple local vector search (no FAISS, no pickle)
-Builds an index from all .txt files in the repo.
-"""
+import streamlit as st
+
+st.set_page_config(page_title="Knowledge Base Agent", layout="wide")
+
+st.title("📚 Knowledge Base Agent (Local & Free — NO FAISS)")
+
+
+# ==============================================================
+# 1) TRY IMPORTING FAISS (will fail on Streamlit)
+# ==============================================================
+
+try:
+    import faiss
+    FAISS_AVAILABLE = True
+except Exception:
+    FAISS_AVAILABLE = False
+
+
+
+# ==============================================================
+# 2) FALLBACK: USE CHROMADB + SENTENCE TRANSFORMERS
+# ==============================================================
+
+if not FAISS_AVAILABLE:
+    import chromadb
+    from chromadb.config import Settings
+    from sentence_transformers import SentenceTransformer
+    import os
+
+    # Initialize in-memory Chroma DB
+    client = chromadb.Client(
+        Settings(chroma_db_impl="duckdb+parquet", persist_directory=None)
+    )
+
+    COLL_NAME = "kb_collection"
+
+    try:
+        collection = client.get_collection(name=COLL_NAME)
+    except Exception:
+        collection = client.create_collection(name=COLL_NAME)
+
+    embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    # Build vector collection
+    def build_collection(docs, ids=None):
+        ids = ids if ids else [str(i) for i in range(len(docs))]
+        embeddings = embed_model.encode(docs, convert_to_numpy=True).tolist()
+
+        # Delete old embeddings
+        try:
+            collection.delete(ids=ids)
+        except:
+            pass
+
+        collection.add(
+            embeddings=embeddings,
+            documents=docs,
+            ids=ids
+        )
+
+    # Query collection
+    def query_collection(query, k=5):
+        q_emb = embed_model.encode([query], convert_to_numpy=True).tolist()
+
+        return collection.query(
+            query_embeddings=q_emb,
+            n_results=k,
+            include=["documents", "distances", "ids"]
+        )
+
+
+
+# ==============================================================
+# 3) LOAD AND INDEX sample.txt AUTOMATICALLY
+# ==============================================================
+
+docs = []
+sample_path = "sample.txt"
 
 import os
-import glob
 
-import streamlit as st
-import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.neighbors import NearestNeighbors
-
-st.title("Knowledge Base Agent (Local & Free — No FAISS)")
-
-@st.cache_resource
-def build_index():
-    # 1) Collect documents from all .txt files in the repo
-    txt_files = glob.glob("*.txt")
-    docs = []
-    sources = []
-
-    for path in txt_files:
-        try:
-            with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                text = f.read()
-            if text.strip():
+if os.path.exists(sample_path):
+    with open(sample_path, "r", encoding="utf-8") as f:
+        for line in f:
+            text = line.strip()
+            if text:
                 docs.append(text)
-                sources.append(os.path.basename(path))
-        except Exception:
-            continue
 
-    if not docs:
-        return None, None, None, None
+if not docs:
+    docs = ["No documents found in sample.txt. Add lines to that file in your repo!"]
 
-    # 2) Build embeddings
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    embeddings = model.encode(docs, convert_to_numpy=True, show_progress_bar=False)
+if not FAISS_AVAILABLE:
+    ids = [str(i) for i in range(len(docs))]
+    build_collection(docs, ids)
+    st.success(f"Indexed {len(docs)} documents from sample.txt")
 
-    # 3) Fit NearestNeighbors index
-    nn = NearestNeighbors(metric="cosine")
-    nn.fit(embeddings)
 
-    return model, nn, embeddings, (docs, sources)
 
-model, nn_index, doc_embs, store_data = build_index()
-
-if model is None:
-    st.error("No .txt files found in the repo to index. Add some .txt files and redeploy.")
-    st.stop()
-
-docs, sources = store_data
+# ==============================================================
+# 4) SEARCH UI
+# ==============================================================
 
 query = st.text_input("Ask a question or enter keywords:")
-top_k = st.slider("Top results", 1, 10, 4)
 
 if st.button("Search"):
     if not query.strip():
-        st.warning("Enter a question or keywords.")
+        st.warning("Please type something to search.")
     else:
-        # 4) Embed query and search
-        q_emb = model.encode([query], convert_to_numpy=True)
-        distances, indices = nn_index.kneighbors(q_emb, n_neighbors=top_k)
+        if FAISS_AVAILABLE:
+            st.error("FAISS search disabled on Streamlit Cloud.")
+        else:
+            results = query_collection(query, k=5)
 
-        for rank, idx in enumerate(indices[0]):
-            st.markdown(f"### Result {rank+1}")
-            st.write("**Text:**", docs[int(idx)])
-            st.write("**Source:**", sources[int(idx)])
-            st.write("**Distance (cosine):**", float(distances[0][rank]))
-            st.write("---")
+            st.subheader("🔍 Top Results")
+
+            if results and "documents" in results:
+                for i, doc in enumerate(results["documents"][0]):
+                    st.markdown(f"### Result {i+1}")
+                    st.write(f"**ID:** {results['ids'][0][i]}")
+                    st.write(f"**Distance:** {results['distances'][0][i]:.4f}")
+                    st.write(f"**Text:** {doc}")
+                    st.write("---")
+            else:
+                st.write("No results found.")
 
