@@ -14,9 +14,8 @@ from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 
 # In-memory DB
-client = chromadb.Client(
-    Settings(chroma_db_impl="duckdb+parquet", persist_directory=None)
-)
+# Simple Chroma client that works on Streamlit Cloud
+client = chromadb.Client(Settings())
 
 COLL_NAME = "kb_collection"
 
@@ -102,4 +101,5 @@ if st.button("Search"):
                 st.write("---")
         else:
             st.write("No results found.")
+
 
