@@ -1,3 +1,7 @@
+# Knowledge Base AI Agent (FAISS — Local & Free)
+
+**Single-sentence:** Local semantic search over company documents using Sentence-Transformers + FAISS, with a Streamlit demo.
+
 Knowledge Base AI Agent (FAISS — Local & Free)
 
 A fully functional AI Knowledge Base Agent built in 2–3 hours.
